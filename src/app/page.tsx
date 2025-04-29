@@ -348,7 +348,7 @@ export default function Home() {
                     <button className={styles.sortButton} onClick={() => handleSort('daily_exp_diff')}>
                       {
                         sortConfig.column === 'daily_exp_diff' ?
-                          (sortConfig.direction === 'desc' ? '每日卷王' : '每日成長最少')
+                          (sortConfig.direction === 'desc' ? '每日卷王' : '每日混子')
                           :
                           '日經驗成長'
                       }
@@ -370,7 +370,7 @@ export default function Home() {
                       <div className={styles.profileImageWrapper}>
                         <Image
                           src={player.profile_image_url || '/default_avatar.png'}
-                          alt={player.profile_image_url ? `${player.nickname}的頭像` : '預設玩家頭像'}
+                          alt={player.profile_image_url ? `${player.nickname}` : '預設玩家頭像'}
                           width={192}
                           height={192}
                           className={styles.profileImage}
@@ -408,7 +408,7 @@ export default function Home() {
                     <div className={styles.profileImageWrapper}>
                       <Image
                         src={player.profile_image_url || '/default_avatar.png'}
-                        alt={player.profile_image_url ? `${player.nickname}'s profile image` : '預設玩家頭像'}
+                        alt={player.profile_image_url ? `${player.nickname}` : '預設玩家頭像'}
                         width={192}
                         height={192}
                         className={styles.profileImage}
