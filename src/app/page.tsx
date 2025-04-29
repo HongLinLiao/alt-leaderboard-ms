@@ -1,8 +1,10 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
+import Image from 'next/image';
+import styles from './Home.module.css';
 
-// 定義資料的型別 (與之前相同)
 type tw_data = {
+  date: string;
   nickname: string;
   level: number;
   exp: number;
@@ -19,7 +21,6 @@ type tw_data = {
   specific_job_ranking: number;
 };
 
-// 定義 jobTab 數值與顯示名稱的對應表 (與之前相同)
 const jobTabNames: { [key: number]: string } = {
   0: '全部',
   1: '劍士',
@@ -31,7 +32,6 @@ const jobTabNames: { [key: number]: string } = {
   7: '公會'
 };
 
-// 定義每個 jobTab 下，職業 (job) 的固定順序列表 (與之前相同)
 const jobOrder: { [key: number]: string[] } = {
   1: ['狂戰士', '見習騎士', '槍騎兵'],
   2: ['獵人', '弩弓手'],
@@ -40,15 +40,34 @@ const jobOrder: { [key: number]: string[] } = {
   5: ['槍手', '打手'],
 };
 
+//const external_profile_url = 'https://maplestoryworlds.nexon.com/zh-tw/profile/';
 
 export default function Home() {
   const [data, setData] = useState<tw_data[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  // 新增 state：目前選擇的 jobTab (null 表示全部)
   const [selectedJobTab, setSelectedJobTab] = useState<number | null>(null);
-  // 新增 state：目前選擇的具體職業 (null 表示該 jobTab 下的全部職業)
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ column: 'daily_exp_diff' | null; direction: 'asc' | 'desc' | null }>({ column: null, direction: null });
+
+  const handleSort = (columnName: 'daily_exp_diff') => {
+    setSortConfig(prevConfig => {
+      if (prevConfig.column === columnName) {
+        // 如果點擊當前已排序的欄位，切換方向 (desc -> asc -> null)
+        if (prevConfig.direction === 'desc') {
+          return { column: columnName, direction: 'asc' };
+        } else if (prevConfig.direction === 'asc') {
+          return { column: null, direction: null }; // 取消排序
+        } else {
+          return { column: columnName, direction: 'desc' }; // 默認降冪
+        }
+      } else {
+        // 點擊新的欄位，設置為該欄位的降冪排序
+        // 因為目前只有 'daily_exp_diff' 可排序，這裡簡單設置即可
+        return { column: columnName, direction: 'desc' };
+      }
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,25 +86,59 @@ export default function Home() {
         const sheetData = json.tw_data;
 
         if (Array.isArray(sheetData)) {
-          const validData = sheetData.map(player => {
+          const validData: tw_data[] = sheetData.map((player: {
+            date?: string | null | undefined;
+            nickname?: string | null | undefined;
+            level?: string | number | null | undefined;
+            exp?: string | number | null | undefined;
+            job?: string | null | undefined;
+            job_code?: string | number | null | undefined;
+            jobTab?: string | number | null | undefined;
+            profile_code?: string | null | undefined;
+            profile_image_url?: string | null | undefined;
+            popular?: string | number | null | undefined;
+            levelup_exp?: string | number | null | undefined;
+            daily_exp_diff?: string | number | null | undefined;
+            weekly_exp_diff?: string | number | null | undefined;
+            job_ranking?: string | number | null | undefined;
+            specific_job_ranking?: string | number | null | undefined;
+          }) => {
             return {
-              nickname: player.nickname || '',
-              level: typeof player.level === 'number' ? player.level : parseFloat(player.level) || 0,
-              exp: typeof player.exp === 'number' ? player.exp : parseFloat(player.exp) || 0,
-              job: player.job || '', // 確保 job 是字串
-              job_code: typeof player.job_code === 'number' ? player.job_code : parseFloat(player.job_code) || 0,
-              jobTab: typeof player.jobTab === 'number' ? player.jobTab : parseFloat(player.jobTab) || 0,
-              profile_code: player.profile_code || '',
-              profile_image_url: player.profile_image_url || '',
-              popular: typeof player.popular === 'number' ? player.popular : parseFloat(player.popular) || 0,
-              levelup_exp: typeof player.levelup_exp === 'number' ? player.levelup_exp : parseFloat(player.levelup_exp) || 0,
-              daily_exp_diff: typeof player.daily_exp_diff === 'number' ? player.daily_exp_diff : parseFloat(player.daily_exp_diff) || 0,
-              weekly_exp_diff: typeof player.weekly_exp_diff === 'number' ? player.weekly_exp_diff : parseFloat(player.weekly_exp_diff) || 0,
-              job_ranking: typeof player.job_ranking === 'number' ? player.job_ranking : parseFloat(player.job_ranking) || 0,
-              specific_job_ranking: typeof player.specific_job_ranking === 'number' ? player.specific_job_ranking : parseFloat(player.specific_job_ranking) || 0,
+              date: String(player.date || ''),
+              nickname: String(player.nickname || ''),
+              job: String(player.job || ''),
+              profile_code: String(player.profile_code || ''),
+              profile_image_url: String(player.profile_image_url || ''),
+
+              level: Number(player.level) || 0,
+              exp: Number(player.exp) || 0,
+              job_code: Number(player.job_code) || 0,
+              jobTab: Number(player.jobTab) || 0,
+              popular: Number(player.popular) || 0,
+              levelup_exp: Number(player.levelup_exp) || 0,
+              daily_exp_diff: Number(player.daily_exp_diff) || 0,
+              weekly_exp_diff: Number(player.weekly_exp_diff) || 0,
+              job_ranking: Number(player.job_ranking) || 0,
+              specific_job_ranking: Number(player.specific_job_ranking) || 0,
             };
           });
-          setData(validData);
+
+          let latestData: tw_data[] = [];
+          const allDateStrings = validData.map(item => item.date).filter(d => d);
+          const uniqueDateStrings = Array.from(new Set(allDateStrings));
+
+          if (uniqueDateStrings.length > 0) {
+            const sortedDateStrings = uniqueDateStrings.sort((a, b) => b.localeCompare(a));
+
+            let dateIndex = 0;
+            while (latestData.length === 0 && dateIndex < sortedDateStrings.length) {
+              const targetDateString = sortedDateStrings[dateIndex];
+              latestData = validData.filter(item => item.date === targetDateString);
+              dateIndex++;
+            }
+          }
+          setData(latestData);
+
         } else {
           console.error('資料格式錯誤：預期 json.tw_data 是陣列', json);
           setData([]);
@@ -99,9 +152,9 @@ export default function Home() {
     };
 
     fetchData();
+
   }, []);
 
-  // 計算不重複的 jobTab 值 (用於第一排頁籤)
   const uniqueJobTabs = useMemo(() => {
     const tabs = data
       .map(player => player.jobTab)
@@ -113,9 +166,8 @@ export default function Home() {
     return Array.from(tabs).sort((a, b) => a - b);
   }, [data]);
 
-  // 計算選中的 jobTab 下，不重複且按固定順序排列的職業列表 (用於第二排按鈕)
   const uniqueAndOrderedJobsForSelectedTab = useMemo(() => {
-    if (selectedJobTab === null) {
+    if (selectedJobTab === null || !jobOrder[selectedJobTab]) {
       return [];
     }
 
@@ -130,53 +182,90 @@ export default function Home() {
 
   }, [data, selectedJobTab]);
 
-  // 過濾資料：同時根據搜尋文字、選擇的 jobTab 和 選擇的 job
-  const filteredData = data.filter(player => {
-    const searchMatch = player.nickname?.toLowerCase().includes(search.toLowerCase());
-    const jobTabMatch = selectedJobTab === null || player.jobTab === selectedJobTab;
-    const jobMatch = selectedJob === null || player.job === selectedJob;
-    return searchMatch && jobTabMatch && jobMatch;
-  });
+
+  // 修改：在過濾後增加排序邏輯
+  const filteredData = useMemo(() => {
+    let filtered = data.filter(player => {
+      const searchMatch = player.nickname?.toLowerCase().includes(search.toLowerCase());
+
+      const jobTabMatch = selectedJobTab === null
+        ? player.jobTab === 0
+        : player.jobTab === selectedJobTab;
+
+      const jobMatch = selectedJob === null || player.job === selectedJob;
+
+      return searchMatch && jobTabMatch && jobMatch;
+    });
+
+    // 應用排序
+    if (sortConfig.column !== null && sortConfig.direction !== null) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue;
+        let bValue;
+
+        // 修改：只處理 'daily_exp_diff' 的排序邏輯
+        switch (sortConfig.column) {
+          case 'daily_exp_diff':
+            aValue = a.daily_exp_diff;
+            bValue = b.daily_exp_diff;
+            break;
+          default:
+            // 如果 sortConfig.column 是未知的，不排序 (這個 default 其實不太會跑到)
+            return 0;
+        }
+
+        // 確保值是數字以便正確比較
+        const numA = Number(aValue);
+        const numB = Number(bValue);
 
 
+        let comparison = 0;
+        if (numA > numB) {
+          comparison = 1;
+        } else if (numA < numB) {
+          comparison = -1;
+        }
+
+        // 根據排序方向調整比較結果
+        return sortConfig.direction === 'desc' ? (comparison * -1) : comparison;
+      });
+    }
+
+    return filtered; // 返回排序後的數據
+  }, [data, search, selectedJobTab, selectedJob, sortConfig]);
+
+  // 頁面開始
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <div className="max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow">
-        <h1 className="text-2xl font-bold mb-4">排行榜</h1>
+    <div className={styles.container}>
+      <div className={styles.contentContainer}>
+        <h1 className={styles.heading}>排行榜</h1>
 
         {/* 第一排：Job Tabs */}
         {isLoading ? (
-          <p>載入頁籤...</p>
+          <p className={styles.messageText}>資料載入中...</p>
         ) : (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {/* "全部" 頁籤 - 顯示 jobTabNames[0] 的名稱 */}
+          <div className={styles.tabsContainer}>
+            {/* "全部" 頁籤 */}
             <button
-              key={0} // 使用 0 作為全部的 key
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ${selectedJobTab === null // 當 selectedJobTab 是 null 時表示選中「全部」
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+              key={0}
+              className={`${styles.tabButton} ${selectedJobTab === null ? styles.tabButtonActivePrimary : styles.tabButtonInactive}`}
               onClick={() => {
-                setSelectedJobTab(null); // 設定為 null 表示全部
-                setSelectedJob(null); // 重設選中的 job 為全部
-                setSearch(''); // 清空搜尋
+                setSelectedJobTab(null);
+                setSelectedJob(null);
+                setSearch('');
               }}
             >
-              {jobTabNames[0] || '全部'} {/* 使用 jobTabNames[0] 作為名稱 */}
+              {jobTabNames[0] || '全部'}
             </button>
-            {/* 根據 uniqueJobTabs 生成第一排頁籤 */}
+            {/* 其他 jobTab 頁籤 */}
             {uniqueJobTabs.map(tabValue => {
-              // 過濾掉 jobTabNames 裡定義的「全部」那個 key (例如 0)
               if (tabValue === 0) return null;
 
               const tabName = jobTabNames[tabValue] || `未知分類 (${tabValue})`;
               return (
                 <button
                   key={tabValue}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ${selectedJobTab === tabValue
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
+                  className={`${styles.tabButton} ${selectedJobTab === tabValue ? styles.tabButtonActivePrimary : styles.tabButtonInactive}`}
                   onClick={() => {
                     setSelectedJobTab(tabValue);
                     setSelectedJob(null);
@@ -187,36 +276,33 @@ export default function Home() {
                 </button>
               );
             })}
+            {/* 顯示當前資料的日期 */}
+            {!isLoading && data.length > 0 && data[0].date && (
+              <span className={styles.dateDisplay}>
+                最後更新: {new Date(data[0].date).toLocaleDateString('sv-SE').replaceAll('-', '/')}
+              </span>
+            )}
           </div>
         )}
 
-        {/* *** 修改：第二排：Job 分類按鈕 的顯示條件 *** */}
-        {/* 只有在載入完成 AND selectedJobTab 不為 null AND selectedJobTab 是 1 到 5 之間 AND 該頁籤下有實際職業資料時才顯示 */}
-        {!isLoading && selectedJobTab !== null && selectedJobTab >= 1 && selectedJobTab <= 5 && uniqueAndOrderedJobsForSelectedTab.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2">
-            {/* 該 jobTab 下的「全部職業」按鈕 */}
+        {/* 第二排：Job 分類按鈕 */}
+        {!isLoading && selectedJobTab !== null && jobOrder[selectedJobTab] && uniqueAndOrderedJobsForSelectedTab.length > 0 && (
+          <div className={styles.subTabsContainer}>
+            {/* 該 jobTab 下的「全部分支」按鈕 */}
             <button
               key="all-jobs"
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ${selectedJob === null
-                ? 'bg-cyan-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+              className={`${styles.tabButton} ${selectedJob === null ? styles.subTabButtonActive : styles.subTabButtonInactive}`}
               onClick={() => {
                 setSelectedJob(null);
                 setSearch('');
               }}
             >
-              全部分支 {/* 這裡只顯示「全部職業」即可 */}
+              全部分支
             </button>
-
-            {/* 根據 uniqueAndOrderedJobsForSelectedTab 生成第二排職業按鈕 */}
             {uniqueAndOrderedJobsForSelectedTab.map(jobName => (
               <button
                 key={jobName}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ${selectedJob === jobName
-                  ? 'bg-cyan-500 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                className={`${styles.tabButton} ${selectedJob === jobName ? styles.subTabButtonActive : styles.subTabButtonInactive}`}
                 onClick={() => {
                   setSelectedJob(jobName);
                   setSearch('');
@@ -227,57 +313,138 @@ export default function Home() {
             ))}
           </div>
         )}
-        {/* ************************************************** */}
 
-
-        {/* search bar (與之前相同，更新 placeholder) */}
+        {/* search bar */}
         <input
           type="text"
           placeholder={
             selectedJobTab === null
-              ? '搜尋全部暱稱...'
+              ? `搜尋${jobTabNames[0] || '全部'}中的暱稱...`
               : selectedJob === null
                 ? `搜尋${jobTabNames[selectedJobTab] || `頁籤 ${selectedJobTab}`}中的暱稱...`
                 : `搜尋${selectedJob}中的暱稱...`
           }
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full mb-6 p-2 border rounded"
+          className={styles.searchBar}
         />
 
-        {/* 資料表格或載入/無資料訊息 (與之前相同) */}
+        {/* 資料列表 */}
         {isLoading ? (
-          <p className="text-center">資料載入中...</p>
+          <p className={styles.messageText}>資料載入中...</p>
         ) : filteredData.length > 0 ? (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="border p-2">暱稱</th>
-                <th className="border p-2">等級</th>
-                <th className="border p-2">職業</th>
-                <th className="border p-2">人氣</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((player, idx) => (
-                <tr key={idx}>
-                  <td className="border p-2">{player.nickname}</td>
-                  <td className="border p-2">{player.level}</td>
-                  <td className="border p-2">{player.job}</td>
-                  <td className="border p-2">{player.popular}</td>
+          <> {/* Fragment */}
+            {/* 桌面版表格 */}
+            <table className={styles.desktopTable}>
+              <thead>
+                <tr>
+                  <th>
+                    #
+                  </th>
+                  <th>頭像</th>
+                  <th>暱稱 / 職業 / 等級</th>
+                  <th>經驗值</th>
+                  <th>
+                    <button className={styles.sortButton} onClick={() => handleSort('daily_exp_diff')}>
+                      {
+                        sortConfig.column === 'daily_exp_diff' ?
+                          (sortConfig.direction === 'desc' ? '每日卷王' : '每日成長最少')
+                          :
+                          '日經驗成長'
+                      }
+                      {sortConfig.column === 'daily_exp_diff' && (
+                        <span className={`${styles.sortIndicator} ${sortConfig.direction === 'asc' ? styles.sortIndicatorAsc : styles.sortIndicatorDesc}`}></span>
+                      )}
+                    </button>
+                  </th>
                 </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((player, idx) => (
+                  <tr
+                    key={player.profile_code || idx}
+                    className={`${styles.playerRow} ${idx % 2 === 0 ? styles.desktopRowEven : styles.desktopRowOdd}`}
+                  >
+                    <td>{idx + 1}</td>
+                    <td>
+                      <div className={styles.profileImageWrapper}>
+                        <Image
+                          src={player.profile_image_url || '/default_avatar.png'}
+                          alt={player.profile_image_url ? `${player.nickname}的頭像` : '預設玩家頭像'}
+                          width={192}
+                          height={192}
+                          className={styles.profileImage}
+                        />
+                      </div>
+                    </td>
+                    <td>
+                      <div className={styles.cardTextInfo}>
+                        <h2 className={styles.nickname}>{player.nickname} <span className={styles.profileCode}>#{player.profile_code}</span></h2>
+                        <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
+                      </div>
+                    </td>
+                    <td>
+                      <p className={styles.cardText}>{player.exp.toLocaleString()}</p>
+                    </td>
+                    <td>
+                      <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
+                        {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
+                      </p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* 手機版名片列表 */}
+            <div className={styles.mobileCardContainer}>
+              {filteredData.map((player, idx) => (
+                <div
+                  key={player.profile_code || idx}
+                  className={`${styles.mobileCard} ${idx % 2 === 0 ? styles.mobileCardEven : styles.mobileCardOdd}`}
+                >
+                  {/* 手機版名片主要內容 (頭像 + 暱稱/職業) */}
+                  <div className={styles.mobileCardContent}>
+                    <div className={styles.profileImageWrapper}>
+                      <Image
+                        src={player.profile_image_url || '/default_avatar.png'}
+                        alt={player.profile_image_url ? `${player.nickname}'s profile image` : '預設玩家頭像'}
+                        width={192}
+                        height={192}
+                        className={styles.profileImage}
+                      />
+                    </div>
+                    {/* 暱稱 / 職業 / 等級 */}
+                    <div className={styles.mobileCardTextInfo}>
+                      <h2 className={styles.nickname}>{player.nickname} <span className={styles.profileCode}>#{player.profile_code}</span></h2>
+                      <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
+                    </div>
+                  </div>
+                  {/* 手機版額外詳細資訊 (經驗值 / 成長) */}
+                  <div className={styles.mobileCardDetails}>
+                    <p className={styles.cardText}>經驗值: {player.exp.toLocaleString()}</p>
+                    <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
+                      日經驗成長: {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+          </>
         ) : (
           data.length > 0 && (search !== '' || selectedJobTab !== null || selectedJob !== null) ? (
-            <p className="text-center">無符合搜尋或篩選條件的結果。</p>
+            <p className={styles.messageText}>無符合搜尋或篩選條件的結果。</p>
           ) : (
-            <p className="text-center">目前沒有資料。</p>
+            !isLoading && data.length === 0 ? (
+              <p className={styles.messageText}>目前沒有資料。</p>
+            ) : (
+              null
+            )
           )
         )}
 
       </div>
-    </div>
+    </div >
   );
 }
