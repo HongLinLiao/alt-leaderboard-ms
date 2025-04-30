@@ -333,14 +333,27 @@ export default function Home() {
         {isLoading ? (
           <p className={styles.messageText}>資料載入中...</p>
         ) : filteredData.length > 0 ? (
-          <> {/* Fragment */}
-            {/* 桌面版表格 */}
+          <>
+            {/* 手機版排序控制按鈕，只在 <992px 顯示 */}
+            <div className={styles.mobileSortControl}>
+              <button className={styles.sortButton} onClick={() => handleSort('daily_exp_diff')}>
+                {
+                  sortConfig.column === 'daily_exp_diff' ?
+                    (sortConfig.direction === 'desc' ? '每日卷王' : '每日混子')
+                    :
+                    '預設排名'
+                }
+                {sortConfig.column === 'daily_exp_diff' && (
+                  <span className={`${styles.sortIndicator} ${sortConfig.direction === 'asc' ? styles.sortIndicatorAsc : styles.sortIndicatorDesc}`}></span>
+                )}
+              </button>
+            </div>
+
+            {/* 桌面版表格 (Conditional Display handled by CSS media query) */}
             <table className={styles.desktopTable}>
               <thead>
                 <tr>
-                  <th>
-                    #
-                  </th>
+                  <th>#</th>
                   <th>頭像</th>
                   <th>暱稱 / 職業 / 等級</th>
                   <th>經驗值</th>
@@ -350,7 +363,7 @@ export default function Home() {
                         sortConfig.column === 'daily_exp_diff' ?
                           (sortConfig.direction === 'desc' ? '每日卷王' : '每日混子')
                           :
-                          '日經驗成長'
+                          '經驗變化'
                       }
                       {sortConfig.column === 'daily_exp_diff' && (
                         <span className={`${styles.sortIndicator} ${sortConfig.direction === 'asc' ? styles.sortIndicatorAsc : styles.sortIndicatorDesc}`}></span>
@@ -360,13 +373,84 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((player, idx) => (
-                  <tr
+                {filteredData.map((player, idx) => {
+                  const expPercentage = player.levelup_exp && player.levelup_exp > 0
+                    ? (player.exp / player.levelup_exp) * 100
+                    : 0;
+
+                  const clampedPercentage = Math.max(0, Math.min(100, expPercentage));
+                  const givePriority = idx < 5;
+
+                  return (
+                    <tr
+                      key={player.profile_code || idx}
+                      className={`${styles.playerRow} ${idx % 2 === 0 ? styles.desktopRowEven : styles.desktopRowOdd}`}
+                    >
+                      <td>{idx + 1}</td>
+                      <td>
+                        <div className={styles.profileImageWrapper}>
+                          <Image
+                            src={player.profile_image_url || '/default_avatar.png'}
+                            alt={player.profile_image_url ? `${player.nickname}` : '預設玩家頭像'}
+                            width={192}
+                            height={192}
+                            className={styles.profileImage}
+                            {...(givePriority && { priority: true })}
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <div className={styles.cardTextInfo}>
+                          <h2 className={styles.nickname}>{player.nickname} <span className={styles.profileCode}>#{player.profile_code}</span></h2>
+                          <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
+                        </div>
+                      </td>
+                      {/* 桌面版表格的經驗值進度條 */}
+                      <td>
+                        <div className={styles.expProgressContainer}>
+                          <div className={styles.expProgressText}>
+                            {/* 修改這裡，顯示 player.exp / player.levelup_exp */}
+                            <span>EXP: {player.exp.toLocaleString()}</span>{/*  / {player.levelup_exp ? player.levelup_exp.toLocaleString() : '-'} */}
+                            <span>{clampedPercentage.toFixed(2)}%</span>
+                          </div>
+                          <div className={styles.progressBarTrack}>
+                            <div
+                              className={styles.progressBarFill}
+                              style={{ width: `${clampedPercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
+                          {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
+                        </p>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* 手機版名片列表 (Conditional Display handled by CSS media query) */}
+            <div className={styles.mobileCardContainer}>
+              {filteredData.map((player, idx) => {
+                const expPercentage = player.levelup_exp && player.levelup_exp > 0
+                  ? (player.exp / player.levelup_exp) * 100
+                  : 0;
+
+                const clampedPercentage = Math.max(0, Math.min(100, expPercentage));
+                const givePriority = idx < 5;
+
+                return (
+                  <div
                     key={player.profile_code || idx}
-                    className={`${styles.playerRow} ${idx % 2 === 0 ? styles.desktopRowEven : styles.desktopRowOdd}`}
+                    className={`${styles.mobileCard} ${idx % 2 === 0 ? styles.mobileCardEven : styles.mobileCardOdd}`}
                   >
-                    <td>{idx + 1}</td>
-                    <td>
+                    <div className={styles.mobileRank}>
+                      #{idx + 1}
+                    </div>
+                    <div className={styles.mobileCardContent}>
                       <div className={styles.profileImageWrapper}>
                         <Image
                           src={player.profile_image_url || '/default_avatar.png'}
@@ -374,63 +458,41 @@ export default function Home() {
                           width={192}
                           height={192}
                           className={styles.profileImage}
+                          {...(givePriority && { priority: true })}
                         />
                       </div>
-                    </td>
-                    <td>
-                      <div className={styles.cardTextInfo}>
+                      {/* 暱稱 / 職業 / 等級 */}
+                      <div className={styles.mobileCardTextInfo}>
                         <h2 className={styles.nickname}>{player.nickname} <span className={styles.profileCode}>#{player.profile_code}</span></h2>
                         <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
                       </div>
-                    </td>
-                    <td>
-                      <p className={styles.cardText}>{player.exp.toLocaleString()}</p>
-                    </td>
-                    <td>
+                    </div>
+                    {/* 手機版額外詳細資訊 (經驗值進度條 / 成長) */}
+                    <div className={styles.mobileCardDetails}>
+                      {/* 經驗值進度條 */}
+                      <div className={styles.expProgressContainer}>
+                        <div className={styles.expProgressText}>
+                          {/* 修改這裡，顯示 player.exp / player.levelup_exp */}
+                          <span>EXP: {player.exp.toLocaleString()}</span> {/* / {player.levelup_exp ? player.levelup_exp.toLocaleString() : '-'}</span> */}
+                          <span>{clampedPercentage.toFixed(2)}%</span>
+                        </div>
+                        <div className={styles.progressBarTrack}>
+                          <div
+                            className={styles.progressBarFill}
+                            style={{ width: `${clampedPercentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* 日經驗成長 (此部分保留) */}
                       <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
-                        {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
+                        經驗變化: {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
                       </p>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* 手機版名片列表 */}
-            <div className={styles.mobileCardContainer}>
-              {filteredData.map((player, idx) => (
-                <div
-                  key={player.profile_code || idx}
-                  className={`${styles.mobileCard} ${idx % 2 === 0 ? styles.mobileCardEven : styles.mobileCardOdd}`}
-                >
-                  {/* 手機版名片主要內容 (頭像 + 暱稱/職業) */}
-                  <div className={styles.mobileCardContent}>
-                    <div className={styles.profileImageWrapper}>
-                      <Image
-                        src={player.profile_image_url || '/default_avatar.png'}
-                        alt={player.profile_image_url ? `${player.nickname}` : '預設玩家頭像'}
-                        width={192}
-                        height={192}
-                        className={styles.profileImage}
-                      />
-                    </div>
-                    {/* 暱稱 / 職業 / 等級 */}
-                    <div className={styles.mobileCardTextInfo}>
-                      <h2 className={styles.nickname}>{player.nickname} <span className={styles.profileCode}>#{player.profile_code}</span></h2>
-                      <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
                     </div>
                   </div>
-                  {/* 手機版額外詳細資訊 (經驗值 / 成長) */}
-                  <div className={styles.mobileCardDetails}>
-                    <p className={styles.cardText}>經驗值: {player.exp.toLocaleString()}</p>
-                    <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
-                      日經驗成長: {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-
           </>
         ) : (
           data.length > 0 && (search !== '' || selectedJobTab !== null || selectedJob !== null) ? (
@@ -445,6 +507,6 @@ export default function Home() {
         )}
 
       </div>
-    </div >
+    </div>
   );
 }

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Alt Artale Leaderboard",
+  title: "Alt Artale-tw Leaderboard",
   description: "bella my beloved",
 };
 

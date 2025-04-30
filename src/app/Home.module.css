@@ -16,7 +16,7 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
 }
 
-@media (max-width: 575.98px) {
+@media (max-width: 991.98px) {
   .contentContainer {
     max-width: 100%;
   }
@@ -115,17 +115,25 @@
   border-color: #a3a3a3;
 }
 
+.adBlock {
+  width: 100%;
+  height: 100px;
+  background-color: #374151;
+  color: #d1d5db;
+  text-align: center;
+  line-height: 100px;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
 .desktopTable {
   display: none;
   max-width: calc(100% - 4px);
   width: 100%;
   margin: 2px auto;
-
   border-collapse: collapse;
-  /* border: 1px solid #525252; */
-  /* border-radius: 0.5rem; */
-  /* 修改這裡：暫時移除 overflow: hidden; */
-  /* overflow: hidden; */
 }
 
 .desktopTable thead {
@@ -167,11 +175,10 @@
 .playerRow:hover {
   position: relative;
   z-index: 1;
-  /* 保持 box-shadow 設定 */
-  box-shadow: 0 0 0 3px #60a5fa;
-  transition: box-shadow 0.2s ease-in-out;
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+  transition: outline-color 0.2s ease-in-out;
 }
-
 
 .mobileCardContainer {
   display: block;
@@ -185,13 +192,33 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transition: background-color 0.2s ease-in-out;
   color: #d1d5db;
+  position: relative;
+  overflow: hidden;
 }
+
+.mobileCardOdd {
+  background-color: #374151;
+}
+
+.mobileCardEven {
+  background-color: #262626;
+}
+
+/* 手機版名片 hover/focus 效果 */
+.mobileCard:hover,
+.mobileCard:focus {
+  background-color: #454545;
+  /* 或其他你想要的懸停背景色 */
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
 
 .mobileCardContent {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  /* flex-wrap: wrap; */
   margin-bottom: 0.5rem;
 }
 
@@ -219,6 +246,7 @@
   border: 2px solid #a3a3a3;
   flex-shrink: 0;
   position: relative;
+  z-index: 2;
 }
 
 .profileImage {
@@ -228,10 +256,13 @@
   transform: scale(2.5);
   transform-origin: center center;
   transition: transform 0.2s ease-in-out;
+  z-index: 2;
 }
 
 .mobileCard:hover .profileImage,
-.desktopTable tr:hover .profileImage {
+.desktopTable tr:hover .profileImage,
+.mobileCard:focus .profileImage {
+  /* 手機版新增 focus 效果 */
   transform: scale(3);
 }
 
@@ -240,17 +271,20 @@
   font-weight: 700;
   color: #ffffff;
   margin-bottom: 0.25rem;
+  z-index: 2;
 }
 
 .profileCode {
   font-size: 0.7rem;
   color: #a3a3a3;
   margin-left: 0.2rem;
+  z-index: 2;
 }
 
 .cardText {
   font-size: 0.875rem;
   color: #a3a3a3;
+  z-index: 2;
 }
 
 .cardText:last-child {
@@ -300,13 +334,83 @@
   border-top: 6px solid #ffffff;
 }
 
-@media (min-width: 768px) {
+.mobileRank {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  font-size: 6rem;
+  font-weight: bold;
+  color: #555555;
+  opacity: .3;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mobileSortControl {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.expProgressContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.expProgressText {
+  font-size: 0.875rem;
+  color: #d1d5db;
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.progressBarTrack {
+  height: 8px;
+  background-color: #525252;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.progressBarFill {
+  height: 100%;
+  background-color: #3b82f6;
+  background-image: linear-gradient(to right, #3b82f6, #60a5fa, #3b82f6);
+  background-size: 200% 100%;
+  background-position: 0 0;
+  transition: width 0.5s ease-in-out, background-position 1s ease-in-out;
+  animation: none;
+}
+
+.playerRow:hover .progressBarFill {
+  background-color: #4ade80;
+  background-position: 100% 0;
+  animation: progressShimmer 2s linear infinite;
+}
+
+.desktopTable td .expProgressText {
+  font-size: 0.75rem;
+  margin-bottom: 0.1rem;
+}
+
+.desktopTable td .progressBarTrack {
+  height: 6px;
+}
+
+
+@media (min-width: 992px) {
 
   .desktopTable {
     display: table;
   }
 
   .mobileCardContainer {
+    display: none;
+  }
+
+  .mobileSortControl {
     display: none;
   }
 
@@ -332,17 +436,17 @@
 
   .desktopTable th:nth-child(2),
   .desktopTable td:nth-child(2) {
-    width: 80px;
+    width: 60px;
   }
 
   .desktopTable th:nth-child(3),
   .desktopTable td:nth-child(3) {
-    width: 30%;
+    width: 25%;
   }
 
   .desktopTable th:nth-child(4),
   .desktopTable td:nth-child(4) {
-    width: 20%;
+    width: 25%;
   }
 
   .desktopTable th:nth-child(5),
@@ -360,5 +464,25 @@
 
   .cardText:last-child {
     margin-bottom: 0;
+  }
+}
+
+/* 手機版懸停/聚焦時，進度條軌道變綠 */
+.mobileCard:hover .progressBarFill,
+.mobileCard:focus .progressBarFill {
+  background-color: #4ade80;
+  background-position: -100% 0;
+  animation: progressShimmer 2s linear infinite;
+
+}
+
+/* 可選: 定義一個循環動畫 */
+@keyframes progressShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }
