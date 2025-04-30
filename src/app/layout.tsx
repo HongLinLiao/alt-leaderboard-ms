@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Alt Artale-tw Leaderboard",
-  description: "bella my beloved",
+  title: "Artale-TW Alt Leaderboard",
+  description: "Bella my beloved",
 };
 
 export default function RootLayout({
