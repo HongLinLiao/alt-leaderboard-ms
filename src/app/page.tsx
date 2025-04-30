@@ -279,7 +279,7 @@ export default function Home() {
             {/* 顯示當前資料的日期 */}
             {!isLoading && data.length > 0 && data[0].date && (
               <span className={styles.dateDisplay}>
-                最後更新: {new Date(data[0].date).toLocaleDateString('sv-SE').replaceAll('-', '/')}
+                最後更新: {new Date(data[0].date).toLocaleDateString('sv-SE').replaceAll('-', '/')} - 09:00
               </span>
             )}
           </div>
