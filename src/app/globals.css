@@ -26,3 +26,80 @@ body {
   color: var(--foreground);
   /* font-family: Arial, Helvetica, sans-serif; */
 }
+
+.footer {
+  background-color: #262626;
+  color: #a3a3a3;
+  padding: 1.5rem 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.footerContent {
+  max-width: 80%;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+@media (max-width: 991.98px) {
+  .footerContent {
+    max-width: 100%;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footerLeft,
+  .footerCenter,
+  .footerRight {
+    width: 100%;
+  }
+
+  .footerCenter {
+    justify-content: center;
+  }
+}
+
+
+.footerLeft,
+.footerRight {
+  flex-shrink: 0;
+}
+
+.footerText {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.footerDisclaimer {
+  font-size: 0.75rem;
+  color: #737373;
+}
+
+
+.footerCenter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.socialIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.socialIcon:hover {
+  opacity: 0.8;
+}
+
+.socialIcon img,
+.socialIcon span>img {
+  display: block;
+}
