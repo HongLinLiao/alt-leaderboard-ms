@@ -194,6 +194,7 @@
   color: #d1d5db;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .mobileCardOdd {
@@ -204,11 +205,9 @@
   background-color: #262626;
 }
 
-/* 手機版名片 hover/focus 效果 */
 .mobileCard:hover,
 .mobileCard:focus {
   background-color: #454545;
-  /* 或其他你想要的懸停背景色 */
   outline: 2px solid #60a5fa;
   outline-offset: -2px;
 }
@@ -218,7 +217,6 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  /* flex-wrap: wrap; */
   margin-bottom: 0.5rem;
 }
 
@@ -262,7 +260,6 @@
 .mobileCard:hover .profileImage,
 .desktopTable tr:hover .profileImage,
 .mobileCard:focus .profileImage {
-  /* 手機版新增 focus 效果 */
   transform: scale(3);
 }
 
@@ -336,7 +333,7 @@
 
 .mobileRank {
   position: absolute;
-  top: 0.5rem;
+  top: -0.2rem;
   right: 1rem;
   font-size: 6rem;
   font-weight: bold;
@@ -467,16 +464,13 @@
   }
 }
 
-/* 手機版懸停/聚焦時，進度條軌道變綠 */
 .mobileCard:hover .progressBarFill,
 .mobileCard:focus .progressBarFill {
   background-color: #4ade80;
   background-position: -100% 0;
   animation: progressShimmer 2s linear infinite;
-
 }
 
-/* 可選: 定義一個循環動畫 */
 @keyframes progressShimmer {
   0% {
     background-position: 200% 0;
@@ -485,4 +479,76 @@
   100% {
     background-position: -200% 0;
   }
+}
+
+.newlyListedBadge {
+  display: inline-block;
+  background-color: #facc15;
+  color: #181818;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.desktopTable td .newlyListedBadge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.mobileCardDetails .newlyListedBadge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.expandedRow td {
+  padding: 0;
+  border-bottom: 1px solid #525252;
+}
+
+.playerDetailsContainer {
+  background-color: #333;
+  color: #eee;
+  padding: 1rem;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.playerDetailsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.playerDetailsTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.playerDetailsContent p {
+  font-size: 0.875rem;
+  color: #ccc;
+  margin: 0;
+}
+
+.chartPlaceholder {
+  margin-top: 1rem;
+  background-color: #444;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 0.9rem;
+  border-radius: 0.25rem;
+}
+
+.mobileCard .playerDetailsContainer {
+  margin-top: 1rem;
+  border-top: 1px solid #525252;
 }

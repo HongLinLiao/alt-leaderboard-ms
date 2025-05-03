@@ -19,6 +19,7 @@ type tw_data = {
   weekly_exp_diff: number;
   job_ranking: number;
   specific_job_ranking: number;
+  isNewlyListed: boolean;
 };
 
 const jobTabNames: { [key: number]: string } = {
@@ -28,7 +29,6 @@ const jobTabNames: { [key: number]: string } = {
   3: '法師',
   4: '盜賊',
   5: '海盜',
-  6: '人氣',
   7: '公會'
 };
 
@@ -39,8 +39,6 @@ const jobOrder: { [key: number]: string[] } = {
   4: ['刺客', '俠盜'],
   5: ['槍手', '打手'],
 };
-
-//const external_profile_url = 'https://maplestoryworlds.nexon.com/zh-tw/profile/';
 
 export default function Home() {
   const [data, setData] = useState<tw_data[]>([]);
@@ -53,17 +51,14 @@ export default function Home() {
   const handleSort = (columnName: 'daily_exp_diff') => {
     setSortConfig(prevConfig => {
       if (prevConfig.column === columnName) {
-        // 如果點擊當前已排序的欄位，切換方向 (desc -> asc -> null)
         if (prevConfig.direction === 'desc') {
           return { column: columnName, direction: 'asc' };
         } else if (prevConfig.direction === 'asc') {
-          return { column: null, direction: null }; // 取消排序
+          return { column: null, direction: null };
         } else {
-          return { column: columnName, direction: 'desc' }; // 默認降冪
+          return { column: columnName, direction: 'desc' };
         }
       } else {
-        // 點擊新的欄位，設置為該欄位的降冪排序
-        // 因為目前只有 'daily_exp_diff' 可排序，這裡簡單設置即可
         return { column: columnName, direction: 'desc' };
       }
     });
@@ -86,8 +81,14 @@ export default function Home() {
         const sheetData = json.tw_data;
 
         if (Array.isArray(sheetData)) {
-          const validData: tw_data[] = sheetData.map((player: {
-            date?: string | null | undefined;
+          const sortedSheetData = [...sheetData].sort((a, b) => {
+            const dateA = String(a.date || '');
+            const dateB = String(b.date || '');
+            return dateB.localeCompare(dateA);
+          });
+
+          const validData: tw_data[] = sortedSheetData.map((player: {
+            date?: string | number | null | undefined;
             nickname?: string | null | undefined;
             level?: string | number | null | undefined;
             exp?: string | number | null | undefined;
@@ -103,23 +104,28 @@ export default function Home() {
             job_ranking?: string | number | null | undefined;
             specific_job_ranking?: string | number | null | undefined;
           }) => {
+            const rawDailyExpDiff = player.daily_exp_diff;
+            const isNewlyListed = rawDailyExpDiff === null || rawDailyExpDiff === undefined || rawDailyExpDiff === '';
+            const dailyExpDiff = Number(rawDailyExpDiff) || 0;
+
+
             return {
               date: String(player.date || ''),
               nickname: String(player.nickname || ''),
               job: String(player.job || ''),
               profile_code: String(player.profile_code || ''),
               profile_image_url: String(player.profile_image_url || ''),
-
               level: Number(player.level) || 0,
               exp: Number(player.exp) || 0,
               job_code: Number(player.job_code) || 0,
               jobTab: Number(player.jobTab) || 0,
               popular: Number(player.popular) || 0,
               levelup_exp: Number(player.levelup_exp) || 0,
-              daily_exp_diff: Number(player.daily_exp_diff) || 0,
+              daily_exp_diff: dailyExpDiff,
               weekly_exp_diff: Number(player.weekly_exp_diff) || 0,
               job_ranking: Number(player.job_ranking) || 0,
               specific_job_ranking: Number(player.specific_job_ranking) || 0,
+              isNewlyListed: isNewlyListed,
             };
           });
 
@@ -138,6 +144,7 @@ export default function Home() {
             }
           }
           setData(latestData);
+
 
         } else {
           console.error('資料格式錯誤：預期 json.tw_data 是陣列', json);
@@ -163,12 +170,18 @@ export default function Home() {
         acc.add(tab);
         return acc;
       }, new Set<number>());
-    return Array.from(tabs).sort((a, b) => a - b);
+    const sortedTabs = Array.from(tabs).sort((a, b) => a - b);
+    if (!sortedTabs.includes(0)) {
+      sortedTabs.unshift(0);
+    }
+    return sortedTabs.filter(tabValue => tabValue !== 6);
+
   }, [data]);
 
   const uniqueAndOrderedJobsForSelectedTab = useMemo(() => {
-    if (selectedJobTab === null || !jobOrder[selectedJobTab]) {
-      return [];
+    if (selectedJobTab === null || selectedJobTab === 0) {
+      const existingJobs = new Set(data.map(player => player.job).filter(job => job));
+      return Array.from(existingJobs).sort();
     }
 
     const dataForSelectedTab = data.filter(player => player.jobTab === selectedJobTab);
@@ -182,8 +195,6 @@ export default function Home() {
 
   }, [data, selectedJobTab]);
 
-
-  // 修改：在過濾後增加排序邏輯
   const filteredData = useMemo(() => {
     let filtered = data.filter(player => {
       const searchMatch = player.nickname?.toLowerCase().includes(search.toLowerCase());
@@ -197,27 +208,38 @@ export default function Home() {
       return searchMatch && jobTabMatch && jobMatch;
     });
 
-    // 應用排序
     if (sortConfig.column !== null && sortConfig.direction !== null) {
       filtered = [...filtered].sort((a, b) => {
+
+        if (sortConfig.column === 'daily_exp_diff') {
+          const aIsNewlyListed = a.isNewlyListed;
+          const bIsNewlyListed = b.isNewlyListed;
+
+          if (aIsNewlyListed && !bIsNewlyListed) {
+            return 1;
+          }
+          if (!aIsNewlyListed && bIsNewlyListed) {
+            return -1;
+          }
+          if (aIsNewlyListed && bIsNewlyListed) {
+            return 0;
+          }
+        }
+
         let aValue;
         let bValue;
 
-        // 修改：只處理 'daily_exp_diff' 的排序邏輯
         switch (sortConfig.column) {
           case 'daily_exp_diff':
             aValue = a.daily_exp_diff;
             bValue = b.daily_exp_diff;
             break;
           default:
-            // 如果 sortConfig.column 是未知的，不排序 (這個 default 其實不太會跑到)
             return 0;
         }
 
-        // 確保值是數字以便正確比較
         const numA = Number(aValue);
         const numB = Number(bValue);
-
 
         let comparison = 0;
         if (numA > numB) {
@@ -226,48 +248,37 @@ export default function Home() {
           comparison = -1;
         }
 
-        // 根據排序方向調整比較結果
         return sortConfig.direction === 'desc' ? (comparison * -1) : comparison;
       });
     }
 
-    return filtered; // 返回排序後的數據
+    if (selectedJobTab === null) {
+      filtered = filtered.slice(0, 100);
+    }
+
+    return filtered;
   }, [data, search, selectedJobTab, selectedJob, sortConfig]);
 
-  // 頁面開始
+
   return (
     <div className={styles.container}>
       <div className={styles.contentContainer}>
         <h1 className={styles.heading}>排行榜</h1>
 
-        {/* 第一排：Job Tabs */}
         {isLoading ? (
           <p className={styles.messageText}>資料載入中...</p>
         ) : (
           <div className={styles.tabsContainer}>
-            {/* "全部" 頁籤 */}
-            <button
-              key={0}
-              className={`${styles.tabButton} ${selectedJobTab === null ? styles.tabButtonActivePrimary : styles.tabButtonInactive}`}
-              onClick={() => {
-                setSelectedJobTab(null);
-                setSelectedJob(null);
-                setSearch('');
-              }}
-            >
-              {jobTabNames[0] || '全部'}
-            </button>
-            {/* 其他 jobTab 頁籤 */}
             {uniqueJobTabs.map(tabValue => {
-              if (tabValue === 0) return null;
-
               const tabName = jobTabNames[tabValue] || `未知分類 (${tabValue})`;
+              const isActive = selectedJobTab === null ? tabValue === 0 : selectedJobTab === tabValue;
+
               return (
                 <button
                   key={tabValue}
-                  className={`${styles.tabButton} ${selectedJobTab === tabValue ? styles.tabButtonActivePrimary : styles.tabButtonInactive}`}
+                  className={`${styles.tabButton} ${isActive ? styles.tabButtonActivePrimary : styles.tabButtonInactive}`}
                   onClick={() => {
-                    setSelectedJobTab(tabValue);
+                    setSelectedJobTab(tabValue === 0 ? null : tabValue);
                     setSelectedJob(null);
                     setSearch('');
                   }}
@@ -276,7 +287,6 @@ export default function Home() {
                 </button>
               );
             })}
-            {/* 顯示當前資料的日期 */}
             {!isLoading && data.length > 0 && data[0].date && (
               <span className={styles.dateDisplay}>
                 最後更新: {new Date(data[0].date).toLocaleDateString('sv-SE').replaceAll('-', '/')} - 09:00
@@ -285,10 +295,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* 第二排：Job 分類按鈕 */}
-        {!isLoading && selectedJobTab !== null && jobOrder[selectedJobTab] && uniqueAndOrderedJobsForSelectedTab.length > 0 && (
+        {/* 第二排：Job 分類按鈕 - 只有當選中的不是 JobTab 0 時才顯示 */}
+        {!isLoading && selectedJobTab !== null && selectedJobTab !== 0 && uniqueAndOrderedJobsForSelectedTab.length > 0 && (
           <div className={styles.subTabsContainer}>
-            {/* 該 jobTab 下的「全部分支」按鈕 */}
             <button
               key="all-jobs"
               className={`${styles.tabButton} ${selectedJob === null ? styles.subTabButtonActive : styles.subTabButtonInactive}`}
@@ -299,6 +308,7 @@ export default function Home() {
             >
               全部分支
             </button>
+
             {uniqueAndOrderedJobsForSelectedTab.map(jobName => (
               <button
                 key={jobName}
@@ -314,7 +324,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* search bar */}
         <input
           type="text"
           placeholder={
@@ -329,12 +338,10 @@ export default function Home() {
           className={styles.searchBar}
         />
 
-        {/* 資料列表 */}
         {isLoading ? (
           <p className={styles.messageText}>資料載入中...</p>
         ) : filteredData.length > 0 ? (
           <>
-            {/* 手機版排序控制按鈕，只在 <992px 顯示 */}
             <div className={styles.mobileSortControl}>
               <button className={styles.sortButton} onClick={() => handleSort('daily_exp_diff')}>
                 {
@@ -349,7 +356,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* 桌面版表格 (Conditional Display handled by CSS media query) */}
             <table className={styles.desktopTable}>
               <thead>
                 <tr>
@@ -366,7 +372,7 @@ export default function Home() {
                           '經驗變化'
                       }
                       {sortConfig.column === 'daily_exp_diff' && (
-                        <span className={`${styles.sortIndicator} ${sortConfig.direction === 'asc' ? styles.sortIndicatorAsc : styles.sortIndicatorDesc}`}></span>
+                        <span className={`${styles.sortIndicator} ${styles.sortIndicatorAsc}`}></span>
                       )}
                     </button>
                   </th>
@@ -380,6 +386,9 @@ export default function Home() {
 
                   const clampedPercentage = Math.max(0, Math.min(100, expPercentage));
                   const givePriority = idx < 5;
+
+                  const isNewlyListed = player.isNewlyListed;
+
 
                   return (
                     <tr
@@ -405,12 +414,10 @@ export default function Home() {
                           <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
                         </div>
                       </td>
-                      {/* 桌面版表格的經驗值進度條 */}
                       <td>
                         <div className={styles.expProgressContainer}>
                           <div className={styles.expProgressText}>
-                            {/* 修改這裡，顯示 player.exp / player.levelup_exp */}
-                            <span>EXP: {player.exp.toLocaleString()}</span>{/*  / {player.levelup_exp ? player.levelup_exp.toLocaleString() : '-'} */}
+                            <span>EXP: {player.exp.toLocaleString()} / {player.levelup_exp ? player.levelup_exp.toLocaleString() : '-'}</span>
                             <span>{clampedPercentage.toFixed(2)}%</span>
                           </div>
                           <div className={styles.progressBarTrack}>
@@ -422,8 +429,9 @@ export default function Home() {
                         </div>
                       </td>
                       <td>
-                        <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
-                          {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
+                        {/* 應用新上榜的 CSS 類別，並只顯示文字 */}
+                        <p className={`${styles.cardText} ${isNewlyListed ? styles.newlyListedBadge : (player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative)}`}>
+                          {isNewlyListed ? "新上榜" : (player.daily_exp_diff >= 0 ? '+' : '') + player.daily_exp_diff.toLocaleString()}
                         </p>
                       </td>
                     </tr>
@@ -432,7 +440,6 @@ export default function Home() {
               </tbody>
             </table>
 
-            {/* 手機版名片列表 (Conditional Display handled by CSS media query) */}
             <div className={styles.mobileCardContainer}>
               {filteredData.map((player, idx) => {
                 const expPercentage = player.levelup_exp && player.levelup_exp > 0
@@ -441,6 +448,9 @@ export default function Home() {
 
                 const clampedPercentage = Math.max(0, Math.min(100, expPercentage));
                 const givePriority = idx < 5;
+
+                const isNewlyListed = player.isNewlyListed;
+
 
                 return (
                   <div
@@ -461,19 +471,15 @@ export default function Home() {
                           {...(givePriority && { priority: true })}
                         />
                       </div>
-                      {/* 暱稱 / 職業 / 等級 */}
                       <div className={styles.mobileCardTextInfo}>
                         <h2 className={styles.nickname}>{player.nickname} <span className={styles.profileCode}>#{player.profile_code}</span></h2>
                         <p className={styles.cardText}>{player.job} Lv. {player.level}</p>
                       </div>
                     </div>
-                    {/* 手機版額外詳細資訊 (經驗值進度條 / 成長) */}
                     <div className={styles.mobileCardDetails}>
-                      {/* 經驗值進度條 */}
                       <div className={styles.expProgressContainer}>
                         <div className={styles.expProgressText}>
-                          {/* 修改這裡，顯示 player.exp / player.levelup_exp */}
-                          <span>EXP: {player.exp.toLocaleString()}</span> {/* / {player.levelup_exp ? player.levelup_exp.toLocaleString() : '-'}</span> */}
+                          <span>EXP: {player.exp.toLocaleString()} / {player.levelup_exp ? player.levelup_exp.toLocaleString() : '-'}</span>
                           <span>{clampedPercentage.toFixed(2)}%</span>
                         </div>
                         <div className={styles.progressBarTrack}>
@@ -484,9 +490,13 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* 日經驗成長 (此部分保留) */}
-                      <p className={`${styles.cardText} ${player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative}`}>
-                        經驗變化: {player.daily_exp_diff >= 0 ? '+' : ''}{player.daily_exp_diff.toLocaleString()}
+                      {/* 應用新上榜的 CSS 類別，並根據狀態決定是否顯示 "經驗變化: " 前綴 */}
+                      <p className={`${styles.cardText} ${isNewlyListed ? styles.newlyListedBadge : (player.daily_exp_diff >= 0 ? styles.dailyExpPositive : styles.dailyExpNegative)}`}>
+                        {isNewlyListed ? (
+                          "新上榜"
+                        ) : (
+                          `經驗變化: ${(player.daily_exp_diff >= 0 ? '+' : '') + player.daily_exp_diff.toLocaleString()}`
+                        )}
                       </p>
                     </div>
                   </div>
